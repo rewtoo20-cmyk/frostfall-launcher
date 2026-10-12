@@ -10,8 +10,11 @@
     { name: 'Горный перевал', sky: ['#5b5f97', '#c3c9ee'], hill: ['#a4a9d4', '#7e84b8'], mon: ['yeti', 'golem'], boss: ['ghost', 'Король вьюги'] },
     { name: 'Ледяной замок', sky: ['#2b3a67', '#8a9bd1'], hill: ['#6a7bb5', '#4b5a92'], mon: ['knight', 'ghost'], boss: ['knight', 'Лорд Мороза'] },
     { name: 'Вулкан во льдах', sky: ['#5a1f2b', '#e0733e'], hill: ['#8b3a3a', '#5e2a2e'], mon: ['flame', 'bat'], boss: ['dragon', 'Древний дракон'] },
+    { name: 'Кристальные пещеры', sky: ['#2a2050', '#7a6ac8'], hill: ['#5a4a9a', '#463a80'], mon: ['crystal', 'bat'], boss: ['crystal', 'Сердце кристалла'] },
+    { name: 'Северное сияние', sky: ['#0e1a40', '#3a9a9a'], hill: ['#2a4a6a', '#1e3a58'], mon: ['wisp', 'ghost'], boss: ['wisp', 'Владыка сияния'] },
+    { name: 'Золотые вершины', sky: ['#d8843a', '#ffe9a8'], hill: ['#e8c070', '#c8a050'], mon: ['imp', 'golem'], boss: ['dragon', 'Золотой змей'] },
   ];
-  const MON_NAMES = { slime: 'Ледяной слизень', snowman: 'Злой снеговик', wolf: 'Белый волк', bat: 'Морозная летучка', ghost: 'Призрак вьюги', golem: 'Ледяной голем', yeti: 'Йети', knight: 'Проклятый рыцарь', flame: 'Огненный дух', dragon: 'Ледяной дракон' };
+  const MON_NAMES = { slime: 'Ледяной слизень', snowman: 'Злой снеговик', wolf: 'Белый волк', bat: 'Морозная летучка', ghost: 'Призрак вьюги', golem: 'Ледяной голем', yeti: 'Йети', knight: 'Проклятый рыцарь', crystal: 'Кристальный страж', wisp: 'Огонёк сияния', imp: 'Златобес', goblin: 'Гоблин-вор', flame: 'Огненный дух', dragon: 'Ледяной дракон' };
   const UPS = [
     { id: 'str', name: 'Сила удара', desc: 'Урон от каждого клика', c0: 10, g: 1.16, icon: 'sword' },
     { id: 'crit', name: 'Меткость', desc: 'Шанс крита +0,5% за уровень (до 50%)', c0: 120, g: 1.28, max: 100, icon: 'target' },
@@ -45,12 +48,14 @@
     armor: { name: 'Броня', stat: 'Урон союзников', nouns: ['Броня', 'Кольчуга', 'Плащ', 'Панцирь'] },
     amulet: { name: 'Амулет', stat: 'Золото', nouns: ['Амулет', 'Кулон', 'Талисман', 'Перстень'] },
   };
-  const ADJ = ['Опушки', 'Мороза', 'Озера', 'Вершин', 'Замка', 'Пламени'];
+  const ADJ = ['Опушки', 'Мороза', 'Озера', 'Вершин', 'Замка', 'Пламени', 'Кристаллов', 'Сияния', 'Золота'];
   const PRE = ['Старый', 'Закалённый', 'Заговорённый', 'Королевский', 'Божественный'];
+  const ELITE_PRE = ['Свирепый', 'Древний', 'Ледяной', 'Хитрый', 'Огромный'];
+  const BAFF = [{ id: 'regen', name: 'Регенерация' }, { id: 'armor', name: 'Броня' }, { id: 'rage', name: 'Ярость' }];
   const HPG = 1.5, GOLD_RATIO = 0.08, KILLS_PER_STAGE = 5, BOSS_TIME = 30;
   const BAG_MAX = 24, OFFLINE_BASE_H = 4;
 
-  const H = { dmg: () => 1, gold: () => 1, dps: () => 0, crit: () => 0, boss: () => 0, cd: () => 1, storm: () => 1, shard: () => 1, gear: () => 1, click: () => 1, ally: () => 1, tick: () => {}, kill: () => {}, newCity: () => null, loadCity: () => null, offline: () => {} };
+  const H = { dmg: () => 1, gold: () => 1, dps: () => 0, crit: () => 0, boss: () => 0, cd: () => 1, storm: () => 1, shard: () => 1, gear: () => 1, click: () => 1, ally: () => 1, tick: () => {}, kill: () => {}, strike: () => null, newCity: () => null, loadCity: () => null, offline: () => {} };
   const ACH = [
     { id: 'k100', name: 'Охотник', desc: 'Победи 100 монстров', gems: 2, ok: (s) => s.st.kills >= 100 },
     { id: 'k2000', name: 'Истребитель', desc: 'Победи 2 000 монстров', gems: 6, ok: (s) => s.st.kills >= 2000 },
@@ -67,7 +72,7 @@
 
   // ---------- числа ----------
   function fmt(n) {
-    if (!Number.isFinite(n)) return '∞';
+    if (!Number.isFinite(n)) return 'много';
     if (n < 1000) return n < 10 && n % 1 ? n.toFixed(1).replace('.', ',') : String(Math.floor(n));
     const U = ['', 'К', 'М', 'Б', 'Т', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
     const e = Math.min(U.length - 1, Math.floor(Math.log10(n) / 3));
@@ -83,9 +88,9 @@
       up: { str: 0, crit: 0, critd: 0, gold: 0 }, allies: ALLIES.map(() => 0),
       n: 0, kills: 0, maxN: 0, bag: [], equip: { weapon: null, armor: null, amulet: null },
       gemUp: { auto: 0, power: 0, gold: 0, off: 0 }, ach: {}, uid: 1,
-      set: { bulk: 1, autoBoss: true, autoEquip: true, light: false, sound: true },
-      st: { kills: 0, clicks: 0, bosses: 0, legend: 0, prestiges: 0, best: 0, play: 0 },
-      cd: { storm: 0, cry: 0, rain: 0 }, buff: { cry: 0, rain: 0 }, seen: Date.now(), city: H.newCity(),
+      set: { bulk: 1, autoBoss: true, autoEquip: true, light: false, sound: true, events: true },
+      st: { kills: 0, clicks: 0, bosses: 0, legend: 0, prestiges: 0, best: 0, play: 0, elites: 0, events: 0, goblins: 0, skills: 0, contracts: 0 },
+      cd: { storm: 0, cry: 0, rain: 0 }, buff: { cry: 0, rain: 0 }, seen: Date.now(), city: H.newCity(), ff: {},
       rt: null,
     };
   }
@@ -110,7 +115,8 @@
 
   function spawn(s) {
     const rt = s.rt, i = stageInfo(s.n);
-    rt.mon = { hp: i.hp, max: i.hp, type: i.type, name: i.name, boss: i.boss, dead: false, t: 0, hitT: 0, seed: Math.random() };
+    const elite = !i.boss && s.n >= 3 && Math.random() < 0.06, hp = i.hp * (elite ? 3 : 1);
+    rt.mon = { hp, max: hp, type: i.type, name: elite ? ELITE_PRE[Math.floor(Math.random() * ELITE_PRE.length)] + ' ' + String(i.name).toLowerCase() : i.name, boss: i.boss, elite, aff: i.boss && s.n >= 19 ? BAFF[Math.floor(s.n / 10) % BAFF.length].id : null, dead: false, t: 0, hitT: 0, seed: Math.random() };
     rt.bossT = i.boss ? BOSS_TIME + H.boss(s) : 0;
   }
 
@@ -165,6 +171,7 @@
   function ev(s, o) { const e = s.rt.ev; if (e.length < 60) e.push(o); }
   function dealDamage(s, dmg, o) {
     const rt = ensureRt(s), m = rt.mon; if (!m || m.dead) return;
+    if (m.aff === 'armor') dmg *= 0.65;
     m.hp -= dmg; m.hitT = 0.18;
     ev(s, Object.assign({ t: 'dmg', v: dmg }, o));
     if (m.hp <= 0) kill(s);
@@ -172,21 +179,22 @@
   function hit(s, auto) {
     const rt = ensureRt(s); if (!rt.mon || rt.mon.dead) return 0;
     const crit = Math.random() < critChance(s);
-    const d = clickDmg(s) * (crit ? critMult(s) : 1);
+    let d = clickDmg(s) * (crit ? critMult(s) : 1);
+    const pr = H.strike(s, crit, !!auto); if (pr) d *= pr.m;
     if (!auto) s.st.clicks++;
-    dealDamage(s, d, { crit, auto: !!auto });
+    dealDamage(s, d, { crit, auto: !!auto, proc: pr || undefined });
     return d;
   }
   function kill(s) {
     const rt = s.rt, m = rt.mon, i = stageInfo(s.n);
     m.dead = true; m.t = 0; m.hp = 0;
-    const g = i.gold * goldMult(s); s.gold += g;
+    i.elite = !!m.elite; const g = i.gold * goldMult(s) * (m.elite ? 4 : 1); s.gold += g; if (m.elite) s.st.elites++;
     s.st.kills++; if (i.boss) s.st.bosses++;
-    ev(s, { t: 'gold', v: g });
-    addXp(s, i.xp);
+    ev(s, { t: 'gold', v: g, elite: m.elite });
+    addXp(s, i.xp * (m.elite ? 2 : 1));
     if (i.boss) { const gm = 1 + i.zone + Math.floor(s.n / 30); s.gems += gm; ev(s, { t: 'gems', v: gm }); }
     // выпадение предмета
-    if (i.boss || Math.random() < 0.07) drop(s, i.boss);
+    if (i.boss || Math.random() < (m.elite ? 0.4 : 0.07)) drop(s, i.boss || m.elite);
     H.kill(s, i);
         // продвижение
     s.kills++;
@@ -231,7 +239,8 @@
       // автоудар
       if (s.gemUp.auto > 0 && !(rt.mon && rt.mon.dead)) { rt.autoAcc += s.gemUp.auto * dt; while (rt.autoAcc >= 1) { rt.autoAcc -= 1; hit(s, true); } }
       // таймер босса
-      if (m.boss && !m.dead) { rt.bossT -= dt; if (rt.bossT <= 0) failBoss(s); }
+      if (m.aff === 'regen') m.hp = Math.min(m.max, m.hp + m.max * 0.012 * dt);
+      if (m.boss && !m.dead) { rt.bossT -= dt * (m.aff === 'rage' ? 1.5 : 1); if (rt.bossT <= 0) failBoss(s); }
     }
     H.tick(s, dt);
     // достижения раз в секунду
@@ -244,7 +253,7 @@
     s.cd[id] = sd.cd * H.cd(s);
     if (id === 'storm') { const d = (clickDmg(s) * 20 + dps(s) * 4) * H.storm(s); dealDamage(s, d, { skill: true, crit: true }); }
     else s.buff[id] = sd.dur;
-    ev(s, { t: 'skill', v: id });
+    s.st.skills++; ev(s, { t: 'skill', v: id });
     return true;
   }
 
@@ -253,15 +262,16 @@
     const bonus = boss ? 3 : 1; let tot = 0; const ws = RAR.map((r, i) => { const w = i > 0 ? r.w * bonus : r.w; tot += w; return w; });
     let x = Math.random() * tot; for (let i = 0; i < RAR.length; i++) { x -= ws[i]; if (x <= 0) return i; } return 0;
   }
-  function makeItem(s, n, boss) {
+  function makeItem(s, n, boss, fr) {
     const slotKeys = Object.keys(SLOTS), slot = slotKeys[Math.floor(Math.random() * 3)];
-    const ri = pickRarity(boss), r = RAR[ri], zi = Math.floor(n / 10) % ZONES.length;
+    const ri = fr != null ? Math.min(RAR.length - 1, fr) : pickRarity(boss), r = RAR[ri], zi = Math.floor(n / 10) % ZONES.length;
     const noun = SLOTS[slot].nouns[Math.floor(Math.random() * SLOTS[slot].nouns.length)];
     const val = Math.round(6 * r.m * (1 + n * 0.16) * (0.9 + Math.random() * 0.3));
-    return { id: s.uid++, slot, rar: ri, name: (ri > 0 ? PRE[ri - 1] + ' ' : '') + noun + ' ' + ADJ[zi], val, lvl: n + 1 };
+    const aff = []; if (ri >= 2) { const ks = ['dmg', 'gold', 'crit', 'click', 'ally'].sort(() => Math.random() - 0.5); for (let q = 0; q < (ri >= 3 ? 2 : 1); q++) aff.push([ks[q], Math.round(1.5 * (ri - 1) * (1 + Math.min(n, 200) * 0.01) * (0.8 + Math.random() * 0.4) * 10) / 10]); }
+    return { id: s.uid++, slot, rar: ri, aff, name: (ri > 0 ? PRE[ri - 1] + ' ' : '') + noun + ' ' + ADJ[zi], val, lvl: n + 1 };
   }
-  function drop(s, boss) {
-    const it = makeItem(s, s.n, boss);
+  function drop(s, boss, fr) {
+    const it = makeItem(s, s.n, boss, fr);
     if (it.rar >= 3) s.st.legend++;
     ev(s, { t: 'drop', v: it });
     if (s.set.autoEquip && it.val > eqv(s, it.slot)) { const old = s.equip[it.slot]; s.equip[it.slot] = it; if (old) sellValue(s, old, true); ev(s, { t: 'equip', v: it }); return; }
@@ -317,15 +327,21 @@
     s.bag = Array.isArray(d.bag) ? d.bag.filter(okItem).slice(0, BAG_MAX) : [];
     for (const k of Object.keys(s.equip)) s.equip[k] = d.equip && okItem(d.equip[k]) ? d.equip[k] : null;
     for (const k of Object.keys(s.gemUp)) s.gemUp[k] = Math.max(0, Math.min(GEMUPS.find((x) => x.id === k).max, num(d.gemUp && d.gemUp[k], 0)));
-    s.ach = d.ach && typeof d.ach === 'object' ? d.ach : {}; s.uid = Math.max(1, num(d.uid, 1));
-    Object.assign(s.set, d.set || {}); Object.assign(s.st, d.st || {});
+    s.ach = {}; if (d.ach && typeof d.ach === 'object') for (const a of ACH) if (d.ach[a.id]) s.ach[a.id] = 1; s.uid = Math.max(1, num(d.uid, 1));
+    for (const k of ['autoBoss', 'autoEquip', 'light', 'sound', 'events']) if (d.set && typeof d.set[k] === 'boolean') s.set[k] = d.set[k];
+    if (d.set && [1, 10, 100, 'max'].includes(d.set.bulk)) s.set.bulk = d.set.bulk;
+    for (const k of Object.keys(s.st)) s.st[k] = Math.max(0, num(d.st && d.st[k], 0));
     for (const k of ['storm', 'cry', 'rain']) { s.cd[k] = Math.max(0, num(d.cd && d.cd[k], 0)); }
-    s.seen = num(d.seen, Date.now()); s.city = H.loadCity(d.city);
+    s.seen = num(d.seen, Date.now()); s.city = H.loadCity(d.city); s.ff = d.ff && typeof d.ff === 'object' && !Array.isArray(d.ff) ? d.ff : {};
     return s;
   }
-  function okItem(it) { return it && typeof it === 'object' && SLOTS[it.slot] && Number.isFinite(it.val) && Number.isFinite(it.rar) && RAR[it.rar] && typeof it.name === 'string'; }
+  function okItem(it) {
+    if (!(it && typeof it === 'object' && SLOTS[it.slot] && Number.isFinite(it.val) && Number.isFinite(it.rar) && RAR[it.rar] && typeof it.name === 'string')) return false;
+    it.name = it.name.slice(0, 40); it.val = Math.max(0, it.val); it.lvl = Number.isFinite(it.lvl) ? it.lvl : 1; it.id = Number.isFinite(it.id) ? it.id : 0;
+    it.aff = (Array.isArray(it.aff) ? it.aff : []).filter((a) => Array.isArray(a) && ['dmg', 'gold', 'crit', 'click', 'ally'].includes(a[0]) && Number.isFinite(a[1]) && a[1] >= 0 && a[1] < 1000).slice(0, 2).map((a) => [a[0], a[1]]); return true;
+  }
 
-  root.Core = { H, ev, ZONES, UPS, ALLIES, SKILLS, GEMUPS, RAR, SLOTS, ACH, BAG_MAX, BOSS_TIME, KILLS_PER_STAGE, fmt, fmtTime, newState, ensureRt, spawn, stageInfo, clickDmg, dps, allyDps, dmgMult, goldMult, critChance, critMult, clickBase, xpNeed,
+  root.Core = { H, ev, ZONES, BAFF, dropItem: (s, fr) => drop(s, true, fr), UPS, ALLIES, SKILLS, GEMUPS, RAR, SLOTS, ACH, BAG_MAX, BOSS_TIME, KILLS_PER_STAGE, fmt, fmtTime, newState, ensureRt, spawn, stageInfo, clickDmg, dps, allyDps, dmgMult, goldMult, critChance, critMult, clickBase, xpNeed, makeItem, addXp, itemPrice,
     upCost, allyCost, priceNow, buyUp, buyAlly, buyGem, hit, tick, useSkill, callBoss, equipItem, sellItem, sellWeak, itemPrice, shardGain, canPrestige, prestige, offlineGain, applyOffline, save, load, checkAll: checkAch, eqv };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.Core;
 })(typeof window !== 'undefined' ? window : globalThis);

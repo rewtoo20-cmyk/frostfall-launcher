@@ -3,7 +3,7 @@
   'use strict';
   const Core = root.Core, H = Core.H, F = Core.fmt;
   const RES = { wood: { name: 'Дерево', col: '#d8a860' }, stone: { name: 'Камень', col: '#b8c4d4' }, iron: { name: 'Железо', col: '#8fb0f0' } };
-  const ZONE_RES = ['wood', 'wood', 'stone', 'stone', 'iron', 'iron'];
+  const ZONE_RES = ['wood', 'wood', 'stone', 'stone', 'iron', 'iron', 'stone', 'iron', 'iron'];
   // g0/gg: золото (база и рост на уровень), m: материалы [база, рост]; req: нужный уровень Ратуши
   const BLD = [
     { id: 'hall', name: 'Ратуша', desc: 'Открывает постройки. +4% золота, +2% урона за ур.', g0: 400, gg: 2.1, m: { wood: [25, 1.6], stone: [15, 1.6] }, req: 0, max: 20 },
@@ -14,7 +14,7 @@
     { id: 'forge', name: 'Кузница', desc: 'Снаряжение сильнее: +5% за ур.', g0: 700, gg: 1.9, m: { stone: [40, 1.55], iron: [14, 1.55] }, req: 2 },
     { id: 'treasury', name: 'Казна', desc: 'Золото само капает: +1% этапа в секунду за ур.', g0: 900, gg: 1.95, m: { stone: [50, 1.55], iron: [18, 1.55] }, req: 3 },
     { id: 'walls', name: 'Стены', desc: 'Больше времени на босса: +1,5 с за ур.', g0: 500, gg: 1.85, m: { stone: [60, 1.55], wood: [30, 1.5] }, req: 2 },
-    { id: 'mage', name: 'Башня магов', desc: 'Умения быстрее (−2% откат) и сильнее шторм', g0: 1500, gg: 1.95, m: { stone: [70, 1.55], iron: [30, 1.55] }, req: 4 },
+    { id: 'mage', name: 'Башня магов', desc: 'Умения быстрее (-2% откат) и сильнее шторм', g0: 1500, gg: 1.95, m: { stone: [70, 1.55], iron: [30, 1.55] }, req: 4 },
     { id: 'temple', name: 'Храм льда', desc: '+3% урона и +6% осколков за ур.', g0: 2500, gg: 2.0, m: { stone: [90, 1.6], iron: [50, 1.6] }, req: 5 },
   ];
   const BID = {}; BLD.forEach((b) => { BID[b.id] = b; });
@@ -123,6 +123,7 @@
     m.wood = 0.15 * L('sawmill'); m.stone = 0.12 * L('quarry'); m.iron = 0.08 * L('mine'); m.gps = 0.01 * L('treasury');
     let hd = 0; const cd = [];
     for (const id of c.squad) { const h = c.heroes[id]; if (!h || !h.star) continue; hd += hPower(s, id); for (const [k] of HID[id].p) { const v = pVal(s, id, k); if (k === 'dmg') m.dmg *= 1 + v / 100; else if (k === 'gold') m.gold *= 1 + v / 100; else if (k === 'crit') m.crit += v / 100; else if (k === 'boss') m.boss += v; else if (k === 'cd') cd.push(v); else if (k === 'gear') m.gear *= 1 + v / 100; else if (k === 'click') m.click *= 1 + v / 100; else if (k === 'ally') m.ally *= 1 + v / 100; } }
+    if (Core.World.modFns) for (const f of Core.World.modFns) f(s, m, cd);
     for (const v of cd) m.cd *= 1 - Math.min(0.2, v / 100); m.cd = Math.max(0.35, m.cd); m.dps = hd;
     MC.set(c, { v: c.ver, m }); return m;
   }

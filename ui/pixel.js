@@ -15,14 +15,20 @@
     return (gcache[k] = cv);
   }
   const tw = (s) => { let n = 0; for (const ch of String(s)) n += (F.g[ch] || F.g['?'])[0]; return n; };
+  // строка целиком кешируется в маленький холст -> один drawImage вместо десятков
+  const scache = new Map();
+  function strCv(s, col, sh) {
+    const k = col + '|' + sh + '|' + s; let e = scache.get(k);
+    if (e) { scache.delete(k); scache.set(k, e); return e; }
+    const w = tw(s); e = document.createElement('canvas'); e.width = w + 1; e.height = F.h + 1; const x = e.getContext('2d');
+    for (let pass = sh ? 0 : 1; pass < 2; pass++) { let px = pass ? 0 : 1; const py = pass ? 0 : 1, cc = pass ? col : sh; for (const ch of s) { const g = F.g[ch] || F.g['?']; if (ch !== ' ') x.drawImage(glyph(ch, cc), px, py); px += g[0]; } }
+    scache.set(k, e); if (scache.size > 700) scache.delete(scache.keys().next().value);
+    return e;
+  }
   function text(c, s, x, y, col, o) {
     o = o || {}; s = String(s); const w = tw(s); x = Math.round(x); y = Math.round(y);
     if (o.align === 'c') x -= Math.round(w / 2); else if (o.align === 'r') x -= w;
-    const sh = o.sh === undefined ? '#0a0f1e' : o.sh;
-    for (let pass = sh ? 0 : 1; pass < 2; pass++) {
-      let px = x + (pass ? 0 : 1); const py = y + (pass ? 0 : 1), cc = pass ? col : sh;
-      for (const ch of s) { const g = F.g[ch] || F.g['?']; if (ch !== ' ') c.drawImage(glyph(ch, cc), px, py); px += g[0]; }
-    }
+    if (w > 0) c.drawImage(strCv(s, col, o.sh === undefined ? '#0a0f1e' : o.sh), x, y);
     return w;
   }
   function fit(s, maxW) { s = String(s); if (tw(s) <= maxW) return s; while (s.length > 1 && tw(s + '…') > maxW) s = s.slice(0, -1); return s + '…'; }
@@ -45,14 +51,17 @@
   function finish(a, o) {
     o = o || {}; const w = a.w, h = a.h, W2 = w + 2, H2 = h + 2, out = document.createElement('canvas'); out.width = W2; out.height = H2;
     const ctx = out.getContext('2d'), im = ctx.createImageData(W2, H2), at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? null : a.px[y * w + x]);
-    const ol = hex(o.outline || '#141a2e');
+    const fixed = o.outline ? hex(o.outline) : null, DK = hex('#0e1428');
     for (let y = -1; y <= h; y++) for (let x = -1; x <= w; x++) {
       let col = at(x, y), rgbv = null;
       if (col) {
-        let d = 0; if (!at(x, y - 1)) d += 34; else if (!at(x - 1, y) && at(x + 1, y)) d += 14;
-        if (!at(x, y + 1)) d -= 36; else if (!at(x + 1, y) && at(x - 1, y)) d -= 22;
+        let d = 0; if (!at(x, y - 1)) d += 26; else if (!at(x - 1, y) && at(x + 1, y)) d += 12;
+        if (!at(x, y + 1)) d -= 30; else if (!at(x + 1, y) && at(x - 1, y)) d -= 20;
         if (o.noshade) d = 0; rgbv = hex(shade(col, d));
-      } else if (at(x - 1, y) || at(x + 1, y) || at(x, y - 1) || at(x, y + 1)) rgbv = ol;
+      } else {
+        const nb = at(x, y + 1) || at(x - 1, y) || at(x + 1, y) || at(x, y - 1);
+        if (nb) { if (fixed) rgbv = fixed; else { const n = hex(nb); rgbv = [n[0] * 0.32 + DK[0] * 0.68, n[1] * 0.32 + DK[1] * 0.68, n[2] * 0.32 + DK[2] * 0.68]; } }
+      }
       if (rgbv) { const tx = o.flip ? W2 - 1 - (x + 1) : x + 1, i = ((y + 1) * W2 + tx) * 4; im.data[i] = rgbv[0]; im.data[i + 1] = rgbv[1]; im.data[i + 2] = rgbv[2]; im.data[i + 3] = 255; }
     }
     ctx.putImageData(im, 0, 0); return out;
