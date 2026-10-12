@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<title>FROSTFALL</title>
+<style>
+html,body{margin:0;height:100%;background:#0b1020;overflow:hidden;user-select:none;-webkit-user-select:none}
+canvas{image-rendering:pixelated;display:block;width:768px;height:432px}
+#drag{position:fixed;left:0;top:0;width:700px;height:28px;-webkit-app-region:drag}
+.wb{position:fixed;top:4px;width:22px;height:20px;background:#243459;border:2px solid #0c1224;color:#fff;font:bold 14px monospace;text-align:center;line-height:18px;cursor:pointer;-webkit-app-region:no-drag}
+.wb:hover{background:#3a8ad8}#wc{right:6px}#wm{right:32px}#wc:hover{background:#d8453f}
+</style></head>
+<body><canvas id="cv" width="384" height="216"></canvas><div id="drag"></div><div class="wb" id="wm">_</div><div class="wb" id="wc">x</div>
+<script src="font.js"></script><script src="core.js"></script><script src="pixel.js"></script><script src="art.js"></script><script src="scene.js"></script><script src="launcher.js"></script>
+</body></html>

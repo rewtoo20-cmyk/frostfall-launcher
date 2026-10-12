@@ -1,0 +1,41 @@
+{
+  "name": "frostfall-launcher",
+  "version": "1.0.0",
+  "description": "Лаунчер игры FROSTFALL",
+  "main": "main.js",
+  "author": "5VINCI",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "@electron/fuses": "^1.8.0"
+  },
+  "build": {
+    "appId": "com.vinci5.frostfall",
+    "productName": "FROSTFALL",
+    "directories": { "output": "dist" },
+    "files": ["main.js", "preload.js", "ui/**", "game/**", "build/icon.png", "package.json"],
+    "afterPack": "./afterPack.js",
+    "asar": true,
+    "compression": "maximum",
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }, { "target": "portable", "arch": ["x64"] }],
+      "icon": "build/icon.png",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "FROSTFALL",
+      "artifactName": "FROSTFALL-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "FROSTFALL-Portable-${version}.${ext}"
+    }
+  }
+}

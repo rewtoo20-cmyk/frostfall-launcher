@@ -1,0 +1,5 @@
+{
+  "version": "1.0.0",
+  "files": ["index.html", "font.js", "core.js", "world.js", "pixel.js", "art.js", "scene.js", "city.js", "game.js"],
+  "notes": ["Столица: 10 построек", "10 героев, отряд и вылазки", "Пиксельная графика"]
+}
