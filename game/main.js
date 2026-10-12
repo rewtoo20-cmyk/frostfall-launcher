@@ -3,7 +3,7 @@
 (function (root) {
   'use strict';
   const FF = root.FF = root.FF || {};
-  const VERSION = '1.4.0', KEY = 'frostfall.save.v3', LEGACY = ['frostfall.save.v2'], OFFLINE_CAP = 12 * 3600;
+  const VERSION = '1.6.0', KEY = 'frostfall.save.v3', LEGACY = ['frostfall.save.v2'], OFFLINE_CAP = 12 * 3600;
   const UPDATE_URL = 'https://raw.githubusercontent.com/rewtoo20-cmyk/frostfall/main/version.json';
   const DEF_KEYS = { click: 'Space', skill1: 'Digit1', skill2: 'Digit2', skill3: 'Digit3', fullscreen: 'KeyF', debug: 'F3', mute: 'KeyM', close: 'Escape' };
   const KEYNAMES = { click: 'Удар', skill1: 'Умение 1', skill2: 'Умение 2', skill3: 'Умение 3', fullscreen: 'Полный экран', debug: 'Отладка', mute: 'Звук вкл/выкл', close: 'Закрыть окно' };
@@ -16,6 +16,8 @@
       FF.Log.hook(); Main.env = FF.Env.check(); if (!Main.env.ok) FF.Log.warn('env', 'нет возможностей: ' + Main.env.missing.join(', '));
       Main.saver = new FF.SaveManager(); Main.saver.cleanup(KEY); FF.Clock.init(0); FF.Config.load && FF.Config.load();
       try { const k = JSON.parse(localStorage.getItem('ff.keys') || 'null'); if (k && typeof k === 'object') for (const a in DEF_KEYS) if (typeof k[a] === 'string') Main.keys[a] = k[a]; } catch (e) { /* ключи по умолчанию */ }
+      FF.UX.LongTasks.start(); try { Main.net = new FF.Net({ storage: localStorage }); setTimeout(() => Main.net.check(), 1500); } catch (e) { Main.net = null; }
+      if (typeof addEventListener === 'function') addEventListener('error', (ev) => { const n = Main.net; if (!n || !n.registered || (Main._crashN = (Main._crashN || 0) + 1) > 5) return; n.crash(VERSION, String(ev.message || '') + ' @' + String(ev.filename || '').split('/').pop() + ':' + ev.lineno); });
       return Main;
     },
     // Загрузка: JSON сейва или null
@@ -52,11 +54,11 @@
     _hooks(S, C) {
       if (Main._hooked) return; Main._hooked = true; const H = C.H, f = () => Main.forge;
       const pd = H.dmg, pg = H.gold, pc = H.crit, pk = H.kill, pt = H.tick, po = H.offline;
-      H.dmg = (s) => { const F = f(), m = F.mods(), cls = F.baseStats(s.hero.lvl), war = F.baseStats(s.hero.lvl, 'warrior'); return pd(s) * (1 + m.atkP) * (cls.atk / war.atk) * (1 + m.critd * 0.1); };
-      H.gold = (s) => pg(s) * f().goldFactor() * (Main.inv ? Main.inv.goldMult() * Main.inv.seasonMult() : 1);
+      H.dmg = (s) => { const F = f(), m = F.mods(), cls = F.baseStats(s.hero.lvl), war = F.baseStats(s.hero.lvl, 'warrior'); return pd(s) * (1 + m.atkP) * (cls.atk / war.atk) * (1 + m.critd * 0.1) / FF.UX.NG.mult(s).hp; };
+      H.gold = (s) => pg(s) * FF.UX.NG.mult(s).gold * f().goldFactor() * (Main.inv ? Main.inv.goldMult() * Main.inv.seasonMult() : 1);
       H.crit = (s) => pc(s) + f().mods().crit + (f().baseStats(s.hero.lvl).crit - 0.05);
       H.kill = (s, i) => {
-        pk(s, i); FF.bus.emit('kill', { elite: !!i.elite, boss: !!i.boss, n: 1 });
+        pk(s, i); { const g = FF.UX.NG.mult(s).xp; if (g > 1) s.hero.xp += i.xp * (g - 1); } FF.bus.emit('kill', { elite: !!i.elite, boss: !!i.boss, n: 1 });
         if (i.boss) {
           FF.bus.emit('boss', { n: 1 }); const F = f(); F.wearDown(2);
           if (s.st.legend > Main.legSeen) { Main.legSeen = s.st.legend; F.bossPity(true); } else if (F.bossPity(false)) { C.dropItem(s, 3); Main.legSeen = s.st.legend; if (Main.host.toast) Main.host.toast('Гарантированная легендарка!', '#ff9c2a'); }
@@ -147,9 +149,12 @@
       if (au.cur !== want) { au.music(want); if (!boss && !inv) au.setTempo(1); } if (!boss && !inv && au.tempo > 1) au.setTempo(1);
       if (au.ambient && !Main._amb) { Main._amb = true; au.ambient(true); }
     },
-    frame(dt) { Main.music(dt); Main._fa += dt; Main._fn++; if (Main._fa >= 0.5) { Main.fps = Math.round(Main._fn / Main._fa); Main._fa = 0; Main._fn = 0; } },
+    // раз в минуту отправляем рекорды (только если вырос и игрок зарегистрирован)
+    netTick(dt) { const n = Main.net, S = Main.S; if (S) { Main._ng = (Main._ng || 0) + dt; if (Main._ng > 5) { Main._ng = 0; if (FF.UX.NG.check(S) && Main.host.toast) { Main.host.toast('Финал пройден! Открыт режим Новая игра+', '#ffd24a'); if (Main.host.credits) Main.host.credits(); } } } if (!n || !n.registered || !S) return; Main._nt = (Main._nt || 0) + dt; if (Main._nt < 60) return; Main._nt = 0; if (S.ff && S.ff.cheat) return; n.submit('stage', S.maxN || 0); n.submit('level', S.hero.lvl || 0); n.submit('kills', S.st.kills || 0); },
+    frame(dt) { Main.netTick(dt); Main.music(dt); Main._fa += dt; Main._fn++; if (Main._fa >= 0.5) { Main.fps = Math.round(Main._fn / Main._fa); Main._fa = 0; Main._fn = 0; } },
+    smoke() { return FF.UX.smoke(Main); },
     debugLines(fx) {
-      const L = ['FPS ' + Main.fps + '  v' + VERSION, 'Таймеры ' + FF.Timers.count + '  Шина ' + FF.bus.types().length + ' типов'];
+      const L = ['FPS ' + Main.fps + '  v' + VERSION + (Main.net ? '  сеть ' + Main.net.status + (Main.net.ping ? ' ' + Main.net.ping + 'мс' : '') : ''), 'Таймеры ' + FF.Timers.count + '  Шина ' + FF.bus.types().length + ' типов'];
       if (typeof performance !== 'undefined' && performance.memory) L.push('Память ' + (performance.memory.usedJSHeapSize / 1048576).toFixed(1) + ' МБ');
       if (fx) { const s = fx.stats(); L.push('Частицы ' + s.parts + '/' + s.partsCap + ' кач.' + s.quality); }
       L.push('Ошибок ' + FF.Log.count('ERROR') + '  Предупр. ' + FF.Log.count('WARN'));

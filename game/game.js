@@ -24,6 +24,9 @@
     cv.style.width = Math.round(WD * f) + 'px'; cv.style.height = Math.round(HT * f) + 'px';
     cv.style.imageRendering = (f * d) % 1 < 0.001 || (f * d) % 1 > 0.999 ? 'pixelated' : 'auto';
   }
+  let lowWarn = false; addEventListener('resize', () => { if (!lowWarn && (innerWidth < 512 || innerHeight < 288)) { lowWarn = true; toast('Окно слишком маленькое: интерфейс может быть мелким', '#ffd24a'); } });
+  addEventListener('wheel', (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '0', '_'].includes(e.key)) e.preventDefault(); });
   addEventListener('resize', fitScreen);
 
   // ---------- кнопки (мгновенный режим) ----------
@@ -322,7 +325,7 @@
     }
     return R;
   }
-  function uiH(w) { return { Wd, S, C, F, COL, A, c, text, tw, fit, button, row, head, para, buyBtn, toast, ask, w, bar, debug: FFm.debug, resetScroll: () => { scroll[tab] = 0; }, showText: (t, body) => showDlg(t, '', body) }; }
+  function uiH(w) { return { Wd, S, C, F, COL, A, c, text, tw, fit, button, row, head, para, buyBtn, toast, ask, w, bar, debug: FFm.debug, resetScroll: () => { scroll[tab] = 0; }, showText: (t, body) => showDlg(t, '', body), prompt: showDlg, openConsole, showCredits: () => { credits = { y: HT }; tab = null; }, restart: (f) => ask('Новая игра+?', ['Прогресс сбросится, враги станут сильнее,', 'награда за золото и опыт вырастет.'], () => { if (window.FF.UX.NG.start(S, C)) { persist(); toast('Новая игра+ началась', '#ffd24a'); } }), saveStr: () => C.save(S), loadState: (str) => { S = C.load(str); C.ensureRt(S); FFm.attach(S, C, FFhost); Sc.setLight(S.set.light); persist(); } }; }
   function modalView() {
     const MX = 24, MY = 14, MW = 336, MH = 172, title = (ALLMENU.find((m) => m[0] === tab) || [])[2];
     hits.push({ x: MX, y: MY, w: MW, h: MH, fn: null, block: true });
@@ -370,6 +373,15 @@
   // ---------- диалоги, всплывающие сообщения ----------
   function ask(title, lines, yes) { dialog = { title, lines, buttons: [{ t: 'Отмена' }, { t: 'Да', ok: 1, fn: yes }] }; }
   function toast(t, col) { toasts.push({ t, col: col || '#5bc0ff', life: 3.6 }); if (toasts.length > 3) toasts.shift(); }
+  let credits = null;
+  function drawCredits(dt) {
+    credits.y -= dt * 22; const L = window.FF.UX.CREDITS; c.fillStyle = 'rgba(6,10,24,0.94)'; c.fillRect(0, 0, WD, HT);
+    L.forEach((l, i) => { const y = Math.round(credits.y + i * 16); if (y > -12 && y < HT) text(c, l, Math.round(WD / 2), y, i === 0 ? '#ffd24a' : (/^[А-ЯA-Z]/.test(l) && L[i - 1] === '' ? '#5bc0ff' : '#e8f0ff'), { align: 'c' }); });
+    if (credits.y + L.length * 16 < -10) credits = null;
+  }
+  function openConsole(out) {
+    dp.style.whiteSpace = 'pre-wrap'; showDlg('Консоль', (out && out.length ? out.join('\n') + '\n\n' : '') + 'Команда (help - список):', '', (v) => { const r = window.FF.UX.Console.run(v, { S, C, Main: FFm }); if (v) setTimeout(() => openConsole(r), 30); else dp.style.whiteSpace = ''; });
+  }
   function drawDialog() {
     if (!dialog) return; c.fillStyle = 'rgba(4,8,20,.7)'; c.fillRect(0, 0, WD, HT);
     const w = 250, L = []; dialog.lines.forEach((l) => L.push(...wrap(l, w - 20))); const h = 52 + L.length * 12, x = (WD - w) / 2, y = Math.round((HT - h) / 2);
@@ -394,7 +406,7 @@
   cv.addEventListener('pointerleave', () => { mouse = { x: -1, y: -1 }; });
   cv.addEventListener('contextmenu', (e) => e.preventDefault());
   cv.addEventListener('pointerdown', (e) => {
-    e.preventDefault(); mouse = pos(e); if (EUI.open && !dialog && EUI.pointerDown(mouse, e)) return; for (let i = hits.length - 1; i >= 0; i--) { const h = hits[i]; if (mouse.x >= h.x && mouse.x < h.x + h.w && mouse.y >= h.y && mouse.y < h.y + h.h) { if (h.fn) { FFm.uiSound(h.can); h.fn(); if (h.rep) { clearTimeout(hold); hold = setTimeout(function t() { h.fn(); hold = setTimeout(t, 90); }, 420); } } return; } }
+    e.preventDefault(); mouse = pos(e); if (credits) { credits = null; return; } if (EUI.open && !dialog && EUI.pointerDown(mouse, e)) return; for (let i = hits.length - 1; i >= 0; i--) { const h = hits[i]; if (mouse.x >= h.x && mouse.x < h.x + h.w && mouse.y >= h.y && mouse.y < h.y + h.h) { if (h.fn) { FFm.uiSound(h.can); h.fn(); if (h.rep) { clearTimeout(hold); hold = setTimeout(function t() { h.fn(); hold = setTimeout(t, 90); }, 420); } } return; } }
     if (mode === 'battle' && !talk && !dialog) { if (window.Core.Events && window.Core.Events.click(S, mouse.x, mouse.y)) return; C.hit(S); FFm.onClick(); }
   });
   ['pointerup', 'pointercancel'].forEach((n) => addEventListener(n, () => { if (EUI.open) EUI.pointerUp(); clearTimeout(hold); hold = null; }));
@@ -402,6 +414,8 @@
   addEventListener('keyup', (e) => { if (EUI.open && e.code === 'Space') EUI.key(e); });
   addEventListener('keydown', (e) => {
     if (dlg.style.display === 'flex') { if (e.key === 'Escape') dlg.style.display = 'none'; return; }
+    if (credits) { if (e.key === 'Escape' || e.code === 'Space' || e.key === 'Enter') credits = null; return; }
+    if (e.code === 'Backquote') { e.preventDefault(); openConsole(); return; }
     if (EUI.open && !dialog && !FFm.rebind) { if (EUI.key(e)) return; }
     if (e.repeat || FFm.rebind) return;
     if (talk) { if (e.key === 'Escape') talk = null; else if (e.code === 'Space' || e.key === 'Enter') { e.preventDefault(); const f = String(talk.node.t); if (talk.ch < f.length) talk.ch = f.length; else if (talk.node.c.length === 1) pickChoice(talk.node.c[0]); } else if (/^[1-4]$/.test(e.key) && talk.ch >= String(talk.node.t).length && talk.node.c[+e.key - 1]) pickChoice(talk.node.c[+e.key - 1]); return; }
@@ -443,6 +457,7 @@
     hitsOff = !!(dialog || talk); bldDialog();
     hitsOff = !!dialog; drawTalk(dt);
     hitsOff = false; drawDialog();
+    if (credits) drawCredits(dt);
     questWatch();
     // курсор: рука над кнопками
     let over = false; for (let i = hits.length - 1; i >= 0; i--) { const h = hits[i]; if (mouse.x >= h.x && mouse.x < h.x + h.w && mouse.y >= h.y && mouse.y < h.y + h.h) { over = !!h.fn; break; } } cv.style.cursor = over ? 'pointer' : 'crosshair';
@@ -452,7 +467,7 @@
 
   const EUI = window.FF.EditorUI; let edHO = null;
   const edH = () => edHO || (edHO = { text, tw, fit, panel, button, COL, hit, tipAt, showDlg, ask });
-  const FFhost = { toast: (t, col) => toast(t, col) };
+  const FFhost = { toast: (t, col) => toast(t, col), credits: () => { credits = { y: HT }; } };
   function start() {
     fitScreen(); FFm.boot(); S = loadSave() || C.newState(); C.ensureRt(S); FFm.attach(S, C, FFhost); try { if (/[?&]light=1/.test(location.search)) S.set.light = true; } catch (e) {} Sc.init(); Sc.setLight(S.set.light);
     const off = C.offlineGain(S, Math.min(12 * 3600, FFm.offlineSecs(S)));

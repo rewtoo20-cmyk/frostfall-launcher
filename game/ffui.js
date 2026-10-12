@@ -120,7 +120,7 @@
   };
   // Добавки к настройкам: звук, переназначение клавиш, отладка, версия
   UI.settings = function (h) {
-    const { c, text, button, head, para, COL, ask, toast, S } = h, R = [], M = FF.Main, au = FF.audio;
+    const { c, text, button, head, para, COL, ask, toast, S, F } = h, R = [], M = FF.Main, au = FF.audio;
     R.push(head('Звук и управление'));
     R.push({ h: 21, draw: (x, y, w) => { button(x + 4, y, 60, 17, au.enabled ? 'Звук: вкл' : 'Звук: выкл', { dy: -1, fn: () => { try { au.init(); } catch (e) { /* ignore */ } au.setEnabled(!au.enabled); } });
       [['music', 'Муз.'], ['sfx', 'Эфф.']].forEach((b, i) => { const bx = x + 70 + i * 82; button(bx, y, 14, 17, '-', { dy: -1, fn: () => au.setVolume(b[0], Math.max(0, au.vol[b[0]] - 0.1)) }); text(c, b[1] + ' ' + Math.round(au.vol[b[0]] * 100) + '%', bx + 18, y + 3, COL.tx); button(bx + 62, y, 14, 17, '+', { dy: -1, fn: () => au.setVolume(b[0], Math.min(1, au.vol[b[0]] + 0.1)) }); }); } });
@@ -129,6 +129,29 @@
     R.push(head('Сохранение'));
     R.push(para('Версия ' + M.VERSION + '. Слот загрузки: ' + (M.saver.lastSource || 'нет') + '. Ошибок записи: ' + M.saver.fails + '. Хэш: ' + (M.saver.lastHash || '-'), COL.mut, h.w - 10));
     R.push({ h: 22, draw: (x, y, w) => { button(x + 4, y, 130, 17, 'Просмотр структуры', { dy: -1, fn: () => h.showText('Структура сейва', M.saver.view(M.C.save(S), 2).join('\n')) }); button(x + 138, y, 110, 17, 'Журнал ошибок', { dy: -1, fn: () => h.showText('Журнал', M.errorLog().map((r) => r.lv + ' ' + r.tag + ': ' + r.msg).join('\n') || 'Пусто') }); button(x + 252, y, 70, 17, 'Обновление', { dy: -1, fn: () => M.checkUpdate().then((v) => toast(v ? 'Доступна версия ' + v : 'Установлена последняя версия', v ? '#ffd24a' : '#9fb4d8')) }); } });
+    R.push(head('Игра'));
+    const U = FF.UX, ng = U.NG.st(S), mu = U.NG.mult(S), nm = U.Names.ensure(S);
+    R.push(para(nm.village + ', ' + nm.kingdom + '. Gear Score: ' + U.Gear.score(S, M.forge && ((it) => M.forge.itemVal(it))) + '. NG+: ' + ng.n + (ng.n ? ' (враги x' + mu.hp.toFixed(1).replace('.', ',') + ', золото и опыт x' + mu.gold.toFixed(2).replace('.', ',') + ')' : '') + (S.ff && S.ff.cheat ? '. Использованы читы.' : ''), COL.mut, h.w - 10));
+    R.push({ h: 22, draw: (x, y, w) => { button(x + 4, y, 76, 17, 'Консоль', { dy: -1, fn: () => h.openConsole() }); button(x + 84, y, 60, 17, 'Титры', { dy: -1, fn: () => h.showCredits() }); button(x + 148, y, 84, 17, ng.ready ? 'Новая игра+' : 'NG+ (этаж 60)', { dy: -1, can: ng.ready, green: ng.ready, fn: () => h.restart() }); button(x + 236, y, 86, 17, 'Готовность', { dy: -1, fn: () => h.showText('Готовность', M.smoke().text) }); } });
+    R.push({ h: 22, draw: (x, y, w) => { button(x + 4, y, 120, 17, 'Лог сессии (файл)', { dy: -1, fn: () => toast(U.SessionLog.download(M) ? 'Файл frostfall-log.txt сохранён' : 'Не удалось сохранить файл', '#9fb4d8') }); button(x + 128, y, 100, 17, 'Отряд: по силе', { dy: -1, fn: () => { U.Squad.sort(S, 'power'); toast('Отряд отсортирован', '#9fb4d8'); } }); } });
+    R.push(head('Онлайн'));
+    const N = M.net, tr = (r, ok) => { if (r && r.ok) { if (ok) ok(r); } else toast(r && r.offline ? 'Нет связи с сервером' : (r && r.error) || 'Ошибка', '#ff8a8a'); };
+    if (!N) { R.push(para('Сеть недоступна в этом окружении.', COL.mut, h.w - 10)); return R; }
+    const stTxt = { online: 'на связи', offline: 'нет связи (играем офлайн)', unknown: 'проверка...', off: 'выключено' }[N.status] || N.status;
+    R.push(para('Сервер: ' + stTxt + (N.ping ? ', ' + N.ping + ' мс' : '') + '. Игрок: ' + (N.nick || 'не зарегистрирован') + (N.queue.length ? '. В очереди: ' + N.queue.length : ''), N.status === 'online' ? COL.ok : COL.mut, h.w - 10));
+    R.push({ h: 22, draw: (x, y, w) => {
+      button(x + 4, y, 84, 17, N.registered ? 'Сменить ник' : 'Регистрация', { dy: -1, green: !N.registered, fn: () => h.prompt('Ник', 'От 3 до 16 символов, должен быть свободен:', N.nick || '', (v) => { if (N.registered) N.logout(); N.register(v).then((r) => tr(r, () => { toast('Привет, ' + N.nick + '!', '#5fe08a'); N.submit('stage', S.maxN || 0); }), () => {}); }) });
+      button(x + 92, y, 76, 17, 'Проверить', { dy: -1, fn: () => N.check().then((ok) => toast(ok ? 'Сервер отвечает: ' + N.ping + ' мс' : 'Сервер недоступен', ok ? '#5fe08a' : '#ff8a8a')) });
+      button(x + 172, y, 70, 17, 'Новости', { dy: -1, fn: () => N.news().then((r) => tr(r, () => h.showText('Новости', r.news.map((n) => n.title + '\n' + n.body).join('\n\n') || 'Пусто'))) });
+      button(x + 246, y, 76, 17, 'Журнал', { dy: -1, fn: () => h.showText('Сеть', N.debugDump()) }); } });
+    R.push({ h: 22, draw: (x, y, w) => {
+      [['stage', 'Этаж'], ['level', 'Уровень'], ['kills', 'Убийства']].forEach((b, i) => button(x + 4 + i * 80, y, 76, 17, 'Топ: ' + b[1], { dy: -1, fn: () => N.top(b[0], 10).then((r) => tr(r, () => h.showText('Топ-10: ' + b[1], r.top.map((t, k) => (k + 1) + '. ' + t.nick + ' - ' + F(t.value)).join('\n') || 'Пока пусто' + (r.stale ? '\n(данные устарели)' : '')))) }));
+      button(x + 246, y, 76, 17, 'Промокод', { dy: -1, can: N.registered, fn: () => h.prompt('Промокод', 'Введи код:', '', (v) => N.promo(v).then((r) => tr(r, () => { const g = (r.reward && r.reward.gems) | 0; S.gems += g; toast('Награда: +' + g + ' самоцв.', '#5fe08a'); }))) }); } });
+    R.push({ h: 22, draw: (x, y, w) => {
+      button(x + 4, y, 100, 17, 'В облако', { dy: -1, can: N.registered, fn: () => N.cloudPush(0, h.saveStr()).then((r) => { if (r.conflict) ask('Сервер новее', ['В облаке более новое сохранение.', 'Перезаписать его текущим?'], () => N.cloudPush(0, h.saveStr(), true).then((r2) => tr(r2, () => toast('Сохранено в облако', '#5fe08a')))); else tr(r, () => toast('Сохранено в облако', '#5fe08a')); }) });
+      button(x + 108, y, 100, 17, 'Из облака', { dy: -1, can: N.registered, fn: () => N.cloudPull(0).then((r) => tr(r, () => { if (!r.save) return toast('В облаке пусто', '#9fb4d8'); ask('Загрузить из облака?', ['Текущий прогресс будет заменён.'], () => { try { h.loadState(r.save.data); toast('Загружено из облака', '#5fe08a'); } catch (e) { toast('Сохранение повреждено', '#ff6b6b'); } }); })) });
+      button(x + 212, y, 80, 17, 'Отзыв', { dy: -1, can: N.registered, fn: () => h.prompt('Отзыв', 'Что улучшить или сломалось?', '', (v) => N.feedback(v).then((r) => tr(r, () => toast('Спасибо за отзыв!', '#5fe08a')))) }); } });
+    R.push(para('Рейтинг и облако нужны только онлайн; без сервера игра работает как раньше. Античита на клиенте нет: рейтинг защищён лишь от случайных накруток.', COL.mut, h.w - 10));
     return R;
   };
   FF.UI = UI;

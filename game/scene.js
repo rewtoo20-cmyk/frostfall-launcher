@@ -185,7 +185,7 @@
       if (bolt) { let x = MX + 6, y = 0; while (y < by) { const nx = MX + rr(-9, 9), ny = Math.min(by, y + rr(10, 20)); const steps = Math.ceil(Math.abs(ny - y)); for (let q = 0; q < steps; q++) c.fillRect(Math.round(x + (nx - x) * q / steps), Math.round(y + q), 2, 1); x = nx; y = ny; } c.fillStyle = '#ffffff'; c.fillRect(MX - 1, by - 3, 3, 3); }
       else { const r = Math.round((1 - k) * 30) + 4; c.fillRect(MX - r, by - 1, r * 2, 2); c.fillRect(MX - 1, by - r, 2, r * 2); c.fillRect(MX - Math.round(r * 0.7), by - Math.round(r * 0.7), 2, 2); c.fillRect(MX + Math.round(r * 0.7), by - Math.round(r * 0.7), 2, 2); c.fillRect(MX - Math.round(r * 0.7), by + Math.round(r * 0.7), 2, 2); c.fillRect(MX + Math.round(r * 0.7), by + Math.round(r * 0.7), 2, 2); }
       c.globalAlpha = 1; }
-    if (fxStorm > 0) { c.fillStyle = '#9fe8ff'; for (let k = 0; k < 16; k++) { const x = MX - 40 + k * 5 + Math.round(Math.sin(k * 3 + T * 30) * 3), y = ((1 - fxStorm / 0.7) * 260 + k * 22) % 150; c.fillRect(x, y, 2, 6); } }
+    if (fxStorm > 0) { c.fillStyle = '#9fe8ff'; for (let k = 0; k < 16; k++) { const x = MX - 40 + k * 5 + Math.round(Math.sin(k * 3 + T * 30) * 3), y = Math.round(((1 - fxStorm / 0.7) * 260 + k * 22) % 150); c.fillRect(x, y, 2, 6); } }
     // частицы и числа
     { const x = X(); if (running) { dustT -= dt; if (dustT <= 0) { dustT = 0.16; x.dust(HX - 8, FEET + 1, 2); if (!light) x.footprint(HX - 5 + rr(-1, 1), FEET + 3 + (stepL = !stepL ? 1 : 0)); } x.marks.each((mk) => { mk.x -= 40 * dt; }); }
       x.drawMarks(c); x.draw(c, text); const mm = S.rt.mon; x.vignette(c, mm && mm.boss && !mm.dead && S.rt.bossT > 0 && S.rt.bossT < 6 ? 1 - S.rt.bossT / 6 : 0); }
