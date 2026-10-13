@@ -97,13 +97,13 @@
   ];
   const NID = {}; NPCS.forEach((n) => { NID[n.id] = n; });
   const bl = (id, v) => ({ k: 'bld', id, v });
-  const REQ = { stage: (v) => ({ k: 'stage', v }), boss: (v) => ({ k: 'boss', v }), kills: (v) => ({ k: 'kills', v }), heroes: (v) => ({ k: 'heroes', v }), art: (v) => ({ k: 'art', v }), elite: (v) => ({ k: 'elite', v }), event: (v) => ({ k: 'event', v }), goblin: (v) => ({ k: 'goblin', v }), bld: bl };
+  const REQ = { stage: (v) => ({ k: 'stage', v }), boss: (v) => ({ k: 'boss', v }), kills: (v) => ({ k: 'kills', v }), heroes: (v) => ({ k: 'heroes', v }), art: (v) => ({ k: 'art', v }), elite: (v) => ({ k: 'elite', v }), event: (v) => ({ k: 'event', v }), goblin: (v) => ({ k: 'goblin', v }), night: (v) => ({ k: 'night', v }), bld: bl };
   function reqCur(s, r) {
-    switch (r.k) { case 'bld': return W.lvl(s, r.id); case 'stage': return s.maxN + 1; case 'boss': return s.st.bosses | 0; case 'kills': return s.st.kills | 0; case 'heroes': return Object.keys(s.city.heroes).length; case 'art': return owned(s).length; case 'elite': return s.st.elites | 0; case 'event': return s.st.events | 0; case 'goblin': return s.st.goblins | 0; }
+    switch (r.k) { case 'bld': return W.lvl(s, r.id); case 'stage': return s.maxN + 1; case 'boss': return s.st.bosses | 0; case 'kills': return s.st.kills | 0; case 'heroes': return Object.keys(s.city.heroes).length; case 'art': return owned(s).length; case 'elite': return s.st.elites | 0; case 'event': return s.st.events | 0; case 'goblin': return s.st.goblins | 0; case 'night': return s.st.night | 0; }
     return 0;
   }
   function reqText(r) {
-    switch (r.k) { case 'bld': return W.BID[r.id].name + ' ' + r.v + ' ур.'; case 'stage': return 'Дойти до этапа ' + r.v; case 'boss': return 'Победить боссов: ' + r.v; case 'kills': return 'Победить монстров: ' + r.v; case 'heroes': return 'Героев в столице: ' + r.v; case 'art': return 'Зачарованных мечей: ' + r.v; case 'elite': return 'Победить элитных: ' + r.v; case 'event': return 'Поймать событий: ' + r.v; case 'goblin': return 'Поймать гоблинов: ' + r.v; }
+    switch (r.k) { case 'night': return 'Поймать ночных огоньков: ' + r.v; case 'bld': return W.BID[r.id].name + ' ' + r.v + ' ур.'; case 'stage': return 'Дойти до этапа ' + r.v; case 'boss': return 'Победить боссов: ' + r.v; case 'kills': return 'Победить монстров: ' + r.v; case 'heroes': return 'Героев в столице: ' + r.v; case 'art': return 'Зачарованных мечей: ' + r.v; case 'elite': return 'Победить элитных: ' + r.v; case 'event': return 'Поймать событий: ' + r.v; case 'goblin': return 'Поймать гоблинов: ' + r.v; }
     return '';
   }
   const reqs = (s, q) => q.req.map((r) => { const cur = reqCur(s, r); return { t: reqText(r), cur: Math.min(cur, r.v), max: r.v, ok: cur >= r.v }; });
@@ -195,6 +195,10 @@
       o: 'Я слышал, что в небе летают золотые снежинки! Поймай три события, и я сложу об этом балладу. Рифма «снег» и «побег» уже есть.',
       w: 'Событий пока мало. Баллада получается только про одну снежинку, и та не рифмуется.',
       r: 'Всё! Баллада готова: «Летит снежинка, звенит монета...» Дальше сам доделаю. Держи за вдохновение.' },
+    { id: 'e5', npc: 'einar', pre: 'e4', title: 'Ночные огни', req: [REQ.night(3)], rw: { g: 1200, gems: 8 },
+      o: 'Ночью над снегом летают голубые огоньки. Старики говорят, это души путников. Поймай три, пока они не погасли. Только не ночью в таверне, а в походе.',
+      w: 'Огоньки видно только ночью. Ночь наступает, когда на часах после девяти вечера. Глянь на время вверху.',
+      r: 'Три огонька! Я слышу, как они поют. Держи награду, а песню я допишу сам.' },
     { id: 'e4', npc: 'einar', pre: 'e3', title: 'Хроника элиты', req: [REQ.elite(15)], rw: { g: 1500, gems: 10, art: 'yeti' },
       o: 'Говорят, в походах встречаются элитные твари с золотым блеском. Победи пятнадцать, и я запишу тебя в хроники. А ещё у меня есть зуб... в смысле, Клык.',
       w: 'Пятнадцать элитных. Они сильнее, но и награда у них жирнее, чем моя кружка.',

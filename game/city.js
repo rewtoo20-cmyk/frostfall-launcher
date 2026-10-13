@@ -16,7 +16,10 @@
       const L = Wd.lvl(S, sp.id), info = Wd.bldInfo(S, sp.id), built = L > 0, spr = A.bld(sp.id, tier(L), built), bob = sp.id === 'mage' && built ? Math.round(Math.sin(T * 2)) : 0;
       const x0 = Math.round(sp.x - 36), y0 = Math.round(sp.y - 74 + bob);
       c.fillStyle = '#f2f8ff'; c.fillRect(sp.x - 28, sp.y - 2, 56, 4); c.fillRect(sp.x - 24, sp.y - 4, 48, 2); c.fillRect(sp.x - 24, sp.y + 2, 48, 2); c.fillStyle = '#d6e8f8'; c.fillRect(sp.x - 20, sp.y + 4, 40, 1);
-      if (sp.flip) { c.save(); c.translate(sp.x * 2, 0); c.scale(-1, 1); c.drawImage(spr, x0, y0); c.restore(); } else c.drawImage(spr, x0, y0);
+      const ap = W.City.appear && W.City.appear[sp.id], rv = ap && ap.t < 0.9 ? ap.t / 0.9 : 1, bnc = ap && ap.t >= 0.9 ? Math.round(Math.sin((ap.t - 0.9) / 0.6 * Math.PI) * 3) : 0, y1 = y0 - bnc;
+      if (rv < 1) { c.save(); c.beginPath(); c.rect(sp.x - 40, y0 + Math.round((1 - rv) * spr.height), 80, spr.height); c.clip(); }
+      if (sp.flip) { c.save(); c.translate(sp.x * 2, 0); c.scale(-1, 1); c.drawImage(spr, x0, y1); c.restore(); } else c.drawImage(spr, x0, y1);
+      if (rv < 1) { c.restore(); const ty = y0 + Math.round((1 - rv) * spr.height); c.fillStyle = '#8a6a3a'; c.fillRect(x0 + 8, ty, 2, y0 + spr.height - ty); c.fillRect(x0 + spr.width - 10, ty, 2, y0 + spr.height - ty); c.fillRect(x0 + 8, ty, spr.width - 16, 2); c.fillStyle = '#c9a24a'; c.fillRect(x0 + 8, ty, spr.width - 16, 1); }
       if (!info.reqOk && !built) { c.globalAlpha = 0.55; c.fillStyle = '#10182e'; c.fillRect(sp.x - 18, sp.y - 20, 36, 20); c.globalAlpha = 1; c.drawImage(A.icons.lock, sp.x - 4, sp.y - 16); }
       // метка уровня
       const lab = built ? String(L) : info.reqOk ? '+' : 'Р' + Wd.BID[sp.id].req;

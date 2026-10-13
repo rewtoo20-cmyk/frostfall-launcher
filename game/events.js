@@ -7,7 +7,8 @@
   const goldNow = (s) => Core.stageInfo(s.n).gold * Core.goldMult(s);
 
   function spawnEvent(s) {
-    const E = st(s), r = Math.random();
+    const E = st(s), r = Math.random(), X = root.FF && root.FF.Ext;
+    if (X && X.Time.isNight(X.Time.hour(s)) && r < 0.55) { E.objs.push({ k: 'wisp', x: -12, y0: 40 + Math.random() * 50, y: 50, vx: 30, t: 16, ph: Math.random() * 6 }); ev(s, { k: 'spawn', what: 'wisp' }); return; }
     if (r < 0.45 || s.n < 3) { E.objs.push({ k: 'flake', x: -12, y0: 34 + Math.random() * 46, y: 40, vx: 36, t: 14, ph: Math.random() * 6 }); ev(s, { k: 'spawn', what: 'flake' }); }
     else if (r < 0.65) { E.objs.push({ k: 'goblin', x: 400, y: FEET + 2, vx: -52, t: 10, hp: 3 }); ev(s, { k: 'spawn', what: 'goblin' }); }
     else if (r < 0.85) { E.bliz = 30; s.st.events++; ev(s, { k: 'bliz' }); }
@@ -24,6 +25,9 @@
       else if (r < 0.85) { const g = 1 + Math.floor(Math.random() * 2) + Math.floor(s.maxN / 40); s.gems += g; say(s, o, '+' + g + ' самоцв.', '#ff7ae0'); }
       else if (r < 0.985) { Core.dropItem(s, 2 + (Math.random() < 0.25 ? 1 : 0)); say(s, o, 'Редкая находка!', '#b66cff'); }
       else if (L) { L.dropArt(s, 'event'); say(s, o, 'Меч в снежинке!', '#ff4d6d'); }
+    } else if (o.k === 'wisp') {
+      s.st.events++; s.st.night = (s.st.night | 0) + 1; const g = goldNow(s) * (90 + Math.random() * 60); s.gold += g; say(s, o, 'Ночной огонёк: +' + F(g) + ' золота', '#9fd8ff');
+      if (Math.random() < 0.5) { s.gems += 1; ev(s, { k: 'reward', text: '+1 самоцв.', col: '#ff7ae0', x: o.x, y: o.y - 12 }); }
     } else if (o.k === 'goblin') {
       s.st.events++; s.st.goblins++; const g = goldNow(s) * (110 + Math.random() * 60); s.gold += g; say(s, o, '+' + F(g) + ' золота', '#ffd24a');
       if (Math.random() < 0.4) { s.gems += 2; ev(s, { k: 'reward', text: '+2 самоцв.', col: '#ff7ae0', x: o.x, y: o.y - 12 }); }
@@ -37,9 +41,9 @@
   function tick(s, dt) {
     const E = st(s), rt = s.rt; E.fz = Math.max(0, E.fz - dt); E.bliz = Math.max(0, E.bliz - dt);
     if (!s.set.events) { E.objs.length = 0; return; }
-    if (rt.mode !== 'city') { E.next -= dt; if (E.next <= 0) { spawnEvent(s); E.next = 80 + Math.random() * 80; } }
+    if (rt.mode !== 'city') { E.next -= dt; if (E.next <= 0) { spawnEvent(s); const nx = root.FF && root.FF.Ext; E.next = nx && nx.Time.isNight(nx.Time.hour(s)) ? 40 + Math.random() * 40 : 80 + Math.random() * 80; } }
     for (let i = E.objs.length - 1; i >= 0; i--) {
-      const o = E.objs[i]; o.t -= dt; o.x += o.vx * dt; if (o.k === 'flake') o.y = o.y0 + Math.sin(o.x / 22 + o.ph) * 12;
+      const o = E.objs[i]; o.t -= dt; o.x += o.vx * dt; if (o.k === 'flake' || o.k === 'wisp') o.y = o.y0 + Math.sin(o.x / 22 + o.ph) * 12;
       if (o.t <= 0 || o.x < -40 || o.x > 430) { E.objs.splice(i, 1); if (o.k === 'goblin') ev(s, { k: 'miss', what: 'goblin' }); }
     }
   }
@@ -47,7 +51,7 @@
     const E = st(s); if (!s.set.events) return false;
     for (let i = E.objs.length - 1; i >= 0; i--) {
       const o = E.objs[i]; let hit = false;
-      if (o.k === 'flake') hit = Math.abs(x - o.x) < 15 && Math.abs(y - o.y) < 15;
+      if (o.k === 'flake' || o.k === 'wisp') hit = Math.abs(x - o.x) < 15 && Math.abs(y - o.y) < 15;
       else if (o.k === 'goblin') hit = Math.abs(x - o.x) < 16 && y > o.y - 34 && y < o.y + 6;
       else hit = Math.abs(x - o.x) < 15 && y > o.y - 20 && y < o.y + 4;
       if (!hit) continue;

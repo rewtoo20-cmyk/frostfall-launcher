@@ -19,7 +19,12 @@
   function melody(str, bpm, wave, vol) { const notes = parseNotes(str), beat = 60 / (bpm || 120), W = wave === 'tri' ? tri : wave === 'saw' ? saw : sq; let t0 = 0; const seq = notes.map((q) => { const o = { m: q.m, t0, d: q.len * beat }; t0 += o.d; return o; }); const total = t0;
     return { dur: total + 0.05, fn: (t) => { for (const q of seq) if (t >= q.t0 && t < q.t0 + q.d && q.m != null) { const lt = t - q.t0; return W(midi(q.m) * t) * adsr(lt, q.d, { a: 0.004, d: 0.04, s: 0.55, r: 0.05 }) * (vol || 0.3); } return 0; } }; }
   // Описание звуков: dur (сек), fn(t, n) -> сэмпл; n() даёт шум
+  // Прямоугольная волна (square) для 8-битных звуков: частота скользит от f0 к f1, скважность duty (0.125, 0.25, 0.5), ступенчатая громкость как у чипа NES
+  const squareWave = (ph, duty) => ((ph % 1) < duty ? 1 : -1);
+  const chip = (f0, f1, dur, duty, vol, steps) => ({ dur, fn: (t) => { const k = Math.min(1, t / dur), f = f0 + (f1 - f0) * k, ph = f0 * t + (f1 - f0) * t * t / (2 * dur), lv = steps ? Math.ceil((1 - k) * steps) / steps : 1 - k; return squareWave(ph, duty) * lv * (vol || 0.25) * Math.min(1, t / 0.002); } });
+  const CHIP8 = { click: 'click8', hit: 'hit8', tick: 'click8', coin: 'coin8', gold: 'coin8' };
   const SFX = {
+    jump8: chip(260, 760, 0.18, 0.5, 0.22, 8), click8: chip(1500, 1100, 0.05, 0.25, 0.2, 4), hit8: chip(220, 70, 0.14, 0.125, 0.3, 6), coin8: { dur: 0.22, fn: (t) => squareWave((t < 0.07 ? 988 : 1319) * t, 0.5) * 0.2 * Math.max(0, 1 - t / 0.22) },
     click:   { dur: 0.04, fn: (t, n) => n() * env(t, 0.001, 0.008) * 0.5 + Math.sin(TAU * 1200 * t) * env(t, 0.001, 0.01) * 0.3 },
     hit:     { dur: 0.14, fn: (t, n) => (n() * env(t, 0.001, 0.025) * 0.55 + Math.sin(TAU * (60 + 140 * Math.exp(-t * 30)) * t) * env(t, 0.002, 0.07) * 0.8) },
     crit:    { drive: 2.6, dur: 0.22, fn: (t, n) => (n() * env(t, 0.001, 0.03) * 0.5 + Math.sin(TAU * (50 + 190 * Math.exp(-t * 28)) * t) * env(t, 0.002, 0.08) * 0.8 + sq(900 * t) * env(t, 0.002, 0.07) * 0.22) },
@@ -122,6 +127,7 @@
     }
     warm() { if (!this.ctx) return 0; let n = 0; for (const k in SFX) if (this.buf(k)) n++; return n; }
     play(name, o) {
+      if (this.chip8 && CHIP8[name]) name = CHIP8[name];
       if (!this.enabled || !this.ctx || this.voices >= this.maxVoices) return false; o = o || {};
       const t = this.ctx.currentTime, lastT = this.last.get(name) || -1, gap = o.gap == null ? 0.045 : o.gap; if (t - lastT < gap) return false; // не спамим одним и тем же звуком
       const b = this.buf(name); if (!b) return false; this.last.set(name, t);
@@ -158,7 +164,7 @@
     setHidden(h) { if (!this.ctx) return; const t = this.ctx.currentTime; this.buses.master.gain.setTargetAtTime(h || !this.enabled ? 0 : this.vol.master, t, 0.15); if (h) { if (this.ctx.state === 'running') setTimeout(() => { if (this.hiddenFade && this.ctx) this.ctx.suspend(); }, 600); this.hiddenFade = true; } else { this.hiddenFade = false; if (this.ctx.state === 'suspended') this.ctx.resume(); } }
   }
 
-  FF.AudioManager = AudioManager; FF.AudioSynth = { SFX, TRACKS, renderSfx, renderTrack, renderAmbient, parseNotes, melody, adsr };
+  FF.AudioManager = AudioManager; FF.AudioSynth = { squareWave, chip, SFX, TRACKS, renderSfx, renderTrack, renderAmbient, parseNotes, melody, adsr };
   FF.audio = FF.audio || new AudioManager();
   if (typeof module !== 'undefined' && module.exports) module.exports = FF;
 })(typeof window !== 'undefined' ? window : globalThis);

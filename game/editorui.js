@@ -85,7 +85,7 @@
       c.restore();
       // верхняя панель
       panel(c, 0, 0, 384, 17, { fill: '#162038' }); text(c, fit(m.name + (ed.dirty ? ' *' : '') + (m.locked ? ' [защита]' : ''), 96), 4, 3, '#fff');
-      const B = [['Новая', () => { UI.mode = 'new'; }], ['Карты', () => { UI.mode = 'list'; UI.listScroll = 0; }], ['Сохр.', () => UI.save()], ['Пров.', () => UI.check()], ['Play', () => UI.play()]]; let bx = 104;
+      const B = [['Новая', () => { UI.mode = 'new'; }], ['Карты', () => { UI.mode = 'list'; UI.listScroll = 0; }], ['Сохр.', () => UI.save()], ['Пров.', () => UI.check()], ['Палитра', () => { UI.palOpen = !UI.palOpen; }], ['Play', () => UI.play()]]; let bx = 104;
       for (const [t, fn] of B) { const w = tw(t) + 10; button(bx, 1, w, 15, t, { fn, dy: -1, green: t === 'Play' }); bx += w + 3; }
       button(384 - 15, 1, 14, 15, 'x', { pink: true, dy: -1, fn: () => UI.attemptClose() });
       // палитра
@@ -95,8 +95,9 @@
       D().LAYERS.forEach((l, i) => button(3 + (i % 2) * 47, 51 + (i >> 1) * 14, 46, 13, D().LAYER_NAMES[l], { on: ed.layer === l, dy: -1, fn: () => ed.setLayer(l) }));
       text(c, 'Размер ' + ed.size, 4, 81, COL.mut); button(68, 80, 11, 11, '-', { dy: -1, fn: () => { ed.size = Math.max(1, ed.size - 1); } }); button(81, 80, 11, 11, '+', { dy: -1, fn: () => { ed.size = Math.min(3, ed.size + 1); } });
       const items = L === 'bg' ? D().TILES : L === 'obj' ? D().OBJS.slice(1) : L === 'spn' ? D().SPAWNS.slice(1) : [{ id: 1, name: 'Стена', col: '#ff3a3a' }];
+      UI.palItems = items; UI.palPick = (it) => { if (L === 'bg') ed.tile = it.id; else if (L === 'obj') ed.obj = it.id; else if (L === 'spn') ed.spn = it.id; ed.setTool(ed.tool === 'eraser' || ed.tool === 'pick' ? 'brush' : ed.tool); }; UI.palSel = (it) => (L === 'bg' ? ed.tile === it.id : L === 'obj' ? ed.obj === it.id : L === 'spn' ? ed.spn === it.id : true);
       items.forEach((it, i) => { const x = 3 + (i % 5) * 18, y = 95 + Math.floor(i / 5) * 17, sel = L === 'bg' ? ed.tile === it.id : L === 'obj' ? ed.obj === it.id : L === 'spn' ? ed.spn === it.id : true; const hv = h.hit(x, y, 15, 15, () => { if (L === 'bg') ed.tile = it.id; else if (L === 'obj') ed.obj = it.id; else if (L === 'spn') ed.spn = it.id; ed.setTool(ed.tool === 'eraser' || ed.tool === 'pick' ? 'brush' : ed.tool); });
-        panel(c, x, y, 15, 15, { fill: sel ? '#3a8ad8' : '#24345a' }); c.fillStyle = it.col; c.fillRect(x + 3, y + 3, 9, 9); if (hv) h.tipAt(Math.min(x + 18, 384 - tw(it.name) - 10), y + 16, it.name); });
+        panel(c, x, y, 15, 15, { fill: sel ? '#3a8ad8' : '#24345a' }); if (h.tileSprite) c.drawImage(h.tileSprite(it, 11), x + 2, y + 2); else { c.fillStyle = it.col; c.fillRect(x + 3, y + 3, 9, 9); } if (hv) h.tipAt(Math.min(x + 18, 384 - tw(it.name) - 10), y + 16, it.name); });
       text(c, 'Угроза ' + m.threat, 4, 170, COL.mut); button(68, 169, 11, 11, '-', { dy: -1, fn: () => { m.threat = Math.max(1, m.threat - 1); ed.dirty = true; } }); button(81, 169, 11, 11, '+', { dy: -1, fn: () => { m.threat = Math.min(20, m.threat + 1); ed.dirty = true; } });
       text(c, 'Свет ' + Math.round(m.light.ambient * 100) + '%', 4, 184, COL.mut); button(68, 183, 11, 11, '-', { dy: -1, fn: () => { m.light.ambient = Math.max(0.2, Math.round((m.light.ambient - 0.1) * 10) / 10); ed.dirty = true; } }); button(81, 183, 11, 11, '+', { dy: -1, fn: () => { m.light.ambient = Math.min(1, Math.round((m.light.ambient + 0.1) * 10) / 10); ed.dirty = true; } });
       // статус
@@ -104,7 +105,14 @@
       text(c, (inb ? cur.x + ',' + cur.y : '-') + ' ' + m.w + 'x' + m.h + ' ' + ed.view.zoom + 'x', 4, 203, COL.tx); text(c, UI.msgT > 0 ? fit(UI.msg, 176) : 'B E G I · 1-4 слои · Ctrl+Z · Пробел+мышь', 150, 203, UI.msgT > 0 ? '#ffd24a' : COL.mut);
       button(330, 201, 25, 14, 'Отм', { can: ed.undo.length > 0, dy: -1, fn: () => ed.undoOne() }); button(357, 201, 26, 14, 'Вп.', { can: ed.redo.length > 0, dy: -1, fn: () => ed.redoOne() });
       // окна
-      if (UI.mode === 'new') UI.drawNew(c, h); else if (UI.mode === 'list') UI.drawList(c, h);
+      if (UI.mode === 'new') UI.drawNew(c, h); else if (UI.mode === 'list') UI.drawList(c, h); else if (UI.palOpen) UI.drawPal(c, h);
+    },
+    // Окно палитры: крупные превью тайлов с названиями, выбор одним кликом
+    drawPal(c, h) {
+      const { text, panel, button, fit } = h, items = UI.palItems || [], X = 62, Y = 22, W = 300, Hh = 170, cols = 6, cw = 46, ch = 40;
+      h.hit(0, 0, 384, 216, () => { UI.palOpen = false; }); h.hit(X, Y, W, Hh, null); panel(c, X, Y, W, Hh, { fill: '#162038', hi: '#5bc0ff' }); text(c, 'Палитра: ' + items.length + ' шт. (клик по тайлу)', X + 8, Y + 6, '#fff'); button(X + W - 18, Y + 4, 12, 11, null, { pink: true, fn: () => { UI.palOpen = false; } }); text(c, 'x', X + W - 12, Y + 5, '#fff', { align: 'c' });
+      items.forEach((it, i) => { const x = X + 8 + (i % cols) * cw, y = Y + 22 + Math.floor(i / cols) * ch; if (y + ch > Y + Hh) return; const sel = UI.palSel && UI.palSel(it); const hv = h.hit(x, y, cw - 4, ch - 4, () => { if (UI.palPick) UI.palPick(it); });
+        panel(c, x, y, cw - 4, ch - 4, { fill: sel ? '#3a8ad8' : hv ? '#34508a' : '#24345a' }); if (h.tileSprite) c.drawImage(h.tileSprite(it, 24), x + Math.round((cw - 4 - 24) / 2), y + 3); text(c, fit(it.name, cw - 8), x + Math.round((cw - 4) / 2), y + 28, '#e6f1ff', { align: 'c', sh: null }); });
     },
     drawNew(c, h) {
       const { text, panel, button } = h, X = 90, Y = 40, W = 204, H = 130; h.hit(0, 0, 384, 216, null); panel(c, X, Y, W, H, { fill: '#162038', hi: '#5bc0ff' }); text(c, 'Новая карта', X + 8, Y + 6, '#fff');

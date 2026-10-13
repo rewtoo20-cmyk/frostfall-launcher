@@ -89,7 +89,7 @@
       n: 0, kills: 0, maxN: 0, bag: [], equip: { weapon: null, armor: null, amulet: null },
       gemUp: { auto: 0, power: 0, gold: 0, off: 0 }, ach: {}, uid: 1,
       set: { bulk: 1, autoBoss: true, autoEquip: true, light: false, sound: true, events: true },
-      st: { kills: 0, clicks: 0, bosses: 0, legend: 0, prestiges: 0, best: 0, play: 0, elites: 0, events: 0, goblins: 0, skills: 0, contracts: 0 },
+      st: { kills: 0, clicks: 0, bosses: 0, legend: 0, prestiges: 0, best: 0, play: 0, elites: 0, events: 0, goblins: 0, skills: 0, contracts: 0, night: 0 },
       cd: { storm: 0, cry: 0, rain: 0 }, buff: { cry: 0, rain: 0 }, seen: Date.now(), city: H.newCity(), ff: {},
       rt: null,
     };

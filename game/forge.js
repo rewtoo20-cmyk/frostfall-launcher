@@ -117,7 +117,7 @@
       if (!g.nodes || typeof g.nodes !== 'object') g.nodes = {};
       if (!g.runes || typeof g.runes !== 'object') g.runes = {};
       if (!Array.isArray(g.pot)) g.pot = []; g.pot = g.pot.filter((p) => p && POTIONS[p.id] && Number.isFinite(p.left) && p.left > 0).slice(0, MAX_POTIONS);
-      if (!Array.isArray(g.team)) g.team = []; g.team = g.team.filter((h) => h && typeof h.name === 'string' && Number.isFinite(h.atk)).slice(0, 6);
+      if (!Array.isArray(g.team)) g.team = []; g.team = g.team.filter((h) => h && typeof h.name === 'string' && Number.isFinite(h.atk)).slice(0, 6); for (const h of g.team) { const it = h.item; if (!it || typeof it !== 'object' || !Number.isFinite(it.val) || it.val < 0 || typeof it.slot !== 'string') delete h.item; }
       if (!Array.isArray(g.stash)) g.stash = []; g.stash = g.stash.slice(0, STASH_MAX);
       if (!g.bp || typeof g.bp !== 'object') g.bp = {};
       // очки навыков не могут превышать уровень героя
@@ -209,7 +209,7 @@
       } else if (inf.drop > 0) { it.enh = Math.max(0, (it.enh || 0) - inf.drop); res = 'drop'; }
       this.emit('enhance', { id: it.id, to: inf.to, ok: false, res }); return { ok: false, res };
     }
-    _destroy(it) { const s = this.s; for (const k in s.equip) if (s.equip[k] === it) s.equip[k] = null; let i = s.bag.indexOf(it); if (i >= 0) s.bag.splice(i, 1); i = this.st.stash.indexOf(it); if (i >= 0) this.st.stash.splice(i, 1); }
+    _destroy(it) { const s = this.s; for (const h of this.st.team) if (h.item === it) delete h.item; for (const k in s.equip) if (s.equip[k] === it) s.equip[k] = null; let i = s.bag.indexOf(it); if (i >= 0) s.bag.splice(i, 1); i = this.st.stash.indexOf(it); if (i >= 0) this.st.stash.splice(i, 1); }
     // ---------- распыление и ресурсы ----------
     dismantle(it) {
       if (!it || it.lock) return { ok: false, why: it ? 'Предмет заблокирован' : 'Нет предмета' }; if (this.s.equip[it.slot] === it) return { ok: false, why: 'Предмет надет' };
@@ -296,8 +296,19 @@
       const t = this.st.team; if (t.length >= 6) return { ok: false, why: 'Отряд полон (6)' }; if (t.some((h) => h.uid === cand.uid)) return { ok: false, why: 'Уже нанят' };
       if (this.s.gold < cand.price) return { ok: false, why: 'Не хватает золота' }; this.s.gold -= cand.price; t.push(Object.assign({}, cand)); this.emit('hire', { uid: cand.uid }); return { ok: true };
     }
-    dismiss(uid) { const i = this.st.team.findIndex((h) => h.uid === uid); if (i < 0) return false; this.st.team.splice(i, 1); return true; }
-    teamPower() { return this.st.team.reduce((a, h) => a + h.atk, 0); }
+    dismiss(uid) { const i = this.st.team.findIndex((h) => h.uid === uid); if (i < 0) return false; const h = this.st.team[i]; if (h.item) { if (this.s.bag.length < this.bagCap()) this.s.bag.push(h.item); else if (this.st.stash.length < STASH_MAX) this.st.stash.push(h.item); else return false; delete h.item; } this.st.team.splice(i, 1); return true; }
+    // ---------- обмен предметами с наёмниками (пункт 163) ----------
+    heroBonus(h) { return h && h.item ? Math.max(1, Math.round(h.item.val * 0.1)) : 0; }
+    heroAtk(h) { return h.atk + this.heroBonus(h); }
+    _hero(uid) { return this.st.team.find((h) => h.uid === uid) || null; }
+    giveItem(uid, it) { // предмет из сумки -> наёмнику; старый возвращается в сумку
+      const h = this._hero(uid), s = this.s, i = s.bag.indexOf(it); if (!h || i < 0) return { ok: false, why: 'Нет предмета' }; if (it.lock) return { ok: false, why: 'Предмет заблокирован' };
+      s.bag.splice(i, 1); if (h.item) s.bag.push(h.item); h.item = it; return { ok: true };
+    }
+    takeItem(uid) { const h = this._hero(uid); if (!h || !h.item) return { ok: false, why: 'Пусто' }; if (this.s.bag.length >= this.bagCap()) return { ok: false, why: 'Сумка полна' }; this.s.bag.push(h.item); delete h.item; return { ok: true }; }
+    swapItems(a, b) { const x = this._hero(a), y = this._hero(b); if (!x || !y || x === y) return { ok: false, why: 'Нужны два наёмника' }; if (!x.item && !y.item) return { ok: false, why: 'Нет предметов' }; const t = x.item; if (y.item) x.item = y.item; else delete x.item; if (t) y.item = t; else delete y.item; return { ok: true }; }
+    bestBagItem() { let b = null; for (const it of this.s.bag) if (!it.lock && (!b || it.val > b.val)) b = it; return b; }
+    teamPower() { return this.st.team.reduce((a, h) => a + this.heroAtk(h), 0); }
     // ---------- офлайн ----------
     offline(secs) { this.update(secs); }
     // ---------- самопроверка математики для баланса ----------

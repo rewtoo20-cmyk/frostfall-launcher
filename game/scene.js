@@ -170,7 +170,7 @@
       let s; const dcol = info2.type === 'dragon' ? A.DRAGON_FIRE : null; s = A.mon(m.type, f, boss, dcol);
       const y = FEET + 4 + (boss && W.FF && W.FF.Battle ? W.FF.Battle.idleBob(T, m.seed * 9, 2).dy : 0) - (m.type === 'bat' || m.type === 'ghost' ? 14 + Math.round(Math.sin(T * 3 + m.seed * 5) * 3) : 0), x = MX + enter;
       c.fillStyle = m.elite ? 'rgba(255,210,74,.35)' : 'rgba(20,40,80,.25)'; const sw = boss ? 60 : 30; c.fillRect(Math.round(MX - sw / 2 + enter), FEET + 3, sw, 3); if (m.elite) c.fillRect(Math.round(MX - sw / 2 + enter) + 3, FEET + 6, sw - 6, 1);
-      if (!dead || m.t < 0.4) { const a = dead ? 1 - m.t / 0.4 : 1;         if (dead) { c.globalAlpha = a; drawSpr(c, s, x, y - Math.round(m.t * 20)); c.globalAlpha = 1; } else if (m.hitT > 0) tint(c, s, x, y, '#ffffff', 0.7); else if (boss && W.FF && W.FF.Main && W.FF.Main.bossTint && Math.sin(T * 9) > -0.3) tint(c, s, x, y, '#ff2a1a', 0.35); else if (boss && Math.sin(T * 5) > 0.6) tint(c, s, x, y, m.aff === 'rage' ? '#ff7a2a' : '#ff3050', 0.22); else if (m.elite && Math.sin(T * 4) > 0.3) tint(c, s, x, y, '#ffd24a', 0.3); else drawSpr(c, s, x, y); }
+      if ((!dead || m.t < 0.4) && !m._dis) { const a = dead ? 1 - m.t / 0.4 : 1;         if (dead) { c.globalAlpha = a; drawSpr(c, s, x, y - Math.round(m.t * 20)); c.globalAlpha = 1; } else if (m.hitT > 0) tint(c, s, x, y, '#ffffff', 0.7); else if (boss && W.FF && W.FF.Main && W.FF.Main.bossTint && Math.sin(T * 9) > -0.3) tint(c, s, x, y, '#ff2a1a', 0.35); else if (boss && Math.sin(T * 5) > 0.6) tint(c, s, x, y, m.aff === 'rage' ? '#ff7a2a' : '#ff3050', 0.22); else if (m.elite && Math.sin(T * 4) > 0.3) tint(c, s, x, y, '#ffd24a', 0.3); else drawSpr(c, s, x, y); }
       if (!dead) {
         const bw = boss ? 76 : 48, bx = Math.round(MX - bw / 2), by = y - s.height - 10;
         text(c, m.name, MX, by - 12, boss ? '#ffb1bd' : m.elite ? '#ffd24a' : '#eaf5ff', { align: 'c' }); if (m.elite) c.drawImage(A.icons.crown, MX - 4, by - 22); if (m.aff) { const BA = W.Core.BAFF.find((q) => q.id === m.aff); if (BA) text(c, BA.name, MX, by + 17, '#ff9c6b', { align: 'c' }); }
@@ -207,6 +207,11 @@
         c.fillStyle = '#6b4a10'; for (let r = 0; r < 9; r++) for (let q = 0; q < 9; q++) if (FLK[r][q] === 'X') c.fillRect(x - 5 + q, y - 5 + r, 1, 1);
         c.fillStyle = pu; for (let r = 0; r < 9; r++) for (let q = 0; q < 9; q++) if (FLK[r][q] === 'X') c.fillRect(x - 4 + q, y - 4 + r, 1, 1);
         c.fillStyle = '#fff'; c.fillRect(x - 1, y - 1, 3, 3);
+      } else if (o.k === 'wisp') {
+        const pu = 0.6 + 0.4 * Math.sin(T * 7); c.globalAlpha = 0.25 * pu; c.fillStyle = '#7fc8ff'; c.fillRect(x - 9, y - 3, 19, 7); c.fillRect(x - 3, y - 9, 7, 19); c.globalAlpha = 1;
+        c.fillStyle = '#2a5a8a'; c.fillRect(x - 4, y - 4, 9, 9); c.fillStyle = '#9fd8ff'; c.fillRect(x - 3, y - 3, 7, 7); c.fillStyle = '#ffffff'; c.fillRect(x - 1, y - 1, 3, 3);
+        for (let q = 0; q < 3; q++) { const a = T * 4 + q * 2.1; c.fillStyle = '#cfeaff'; c.fillRect(x + Math.round(Math.cos(a) * 8), y + Math.round(Math.sin(a) * 6), 1, 1); }
+        for (let q = 1; q <= 4; q++) { c.globalAlpha = 0.5 - q * 0.1; c.fillStyle = '#9fd8ff'; c.fillRect(x - q * 5, y + Math.round(Math.sin(T * 5 - q) * 2), 2, 2); } c.globalAlpha = 1;
       } else if (o.k === 'goblin') {
         const g = A.mon('goblin', Math.floor(T * 8) % 2, false); drawSpr(c, g, x, y); c.fillStyle = 'rgba(20,40,80,.25)'; c.fillRect(x - 8, FEET + 3, 16, 2);
         c.drawImage(A.icons.coin, x - 4, y - g.height - 8 + Math.round(Math.sin(T * 8)));

@@ -3,7 +3,7 @@
 (function (root) {
   'use strict';
   const FF = root.FF = root.FF || {};
-  const VERSION = '1.6.0', KEY = 'frostfall.save.v3', LEGACY = ['frostfall.save.v2'], OFFLINE_CAP = 12 * 3600;
+  const VERSION = '1.8.0', KEY = 'frostfall.save.v3', LEGACY = ['frostfall.save.v2'], OFFLINE_CAP = 12 * 3600;
   const UPDATE_URL = 'https://raw.githubusercontent.com/rewtoo20-cmyk/frostfall/main/version.json';
   const DEF_KEYS = { click: 'Space', skill1: 'Digit1', skill2: 'Digit2', skill3: 'Digit3', fullscreen: 'KeyF', debug: 'F3', mute: 'KeyM', close: 'Escape' };
   const KEYNAMES = { click: 'Удар', skill1: 'Умение 1', skill2: 'Умение 2', skill3: 'Умение 3', fullscreen: 'Полный экран', debug: 'Отладка', mute: 'Звук вкл/выкл', close: 'Закрыть окно' };
